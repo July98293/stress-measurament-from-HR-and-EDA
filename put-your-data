@@ -1,0 +1,109 @@
+#modify your data
+input_data = {
+
+    # HR features (computed from 25 seconds of HR signal in bpm)
+    'hrrange':  8.5,
+    'hrvar':    5.2,
+    'hrstd':    2.3,
+    'hrmin':    78.0,
+    'hrmax':    86.5,
+    'hrkurt':  -0.5,
+
+    # EDA features (computed from 25 seconds of EDA signal in μS)
+    'edarange': 0.35,
+    'edavar':   0.02,
+    'edastd':   0.14,
+    'edamin':   0.42,
+}
+
+# ============================================================
+# PREDICTION
+# ============================================================
+
+X_input        = pd.DataFrame([input_data])[FEATURES]
+
+pred_binary    = model.predict(X_input)[0]
+pred_prob      = model.predict_proba(X_input)[0, 1]
+
+X_input_scaled = scaler.transform(X_input.values)
+
+dist           = np.linalg.norm(
+    X_input_scaled - centroid_scaled
+)
+
+stress_idx     = float(
+    np.clip(dist / MAX_DIST * 100, 0, 100)
+)
+
+# ============================================================
+# STRESS LEVEL INTERPRETATION
+# ============================================================
+
+if stress_idx < 25:
+    level = 'LOW'
+
+elif stress_idx < 50:
+    level = 'MEDIUM-LOW'
+
+elif stress_idx < 75:
+    level = 'MEDIUM-HIGH'
+
+else:
+    level = 'HIGH'
+
+# ============================================================
+# OUTPUT
+# ============================================================
+
+print('=' * 50)
+print('  BEKALO — STRESS PREDICTION')
+print('=' * 50)
+
+print(f'  Stress detected : {"YES" if pred_binary == 1 else "NO"}')
+print(f'  Probability     : {pred_prob*100:.1f}%')
+print(f'  Stress Index    : {stress_idx:.1f} / 100')
+print(f'  Stress Level    : {level}')
+
+print('=' * 50)
+
+# ============================================================
+# VISUAL BAR
+# ============================================================
+
+filled = int(stress_idx / 5)
+
+bar = (
+    '█' * filled +
+    '░' * (20 - filled)
+)
+
+print(f'  [{bar}] {stress_idx:.0f}/100')
+
+print()
+
+# ============================================================
+# FEATURE CONTRIBUTION
+# ============================================================
+
+print('  Feature deviation from no-stress centroid:')
+
+centroid_df = pd.Series(
+    centroid_nostress,
+    index=FEATURES
+)
+
+for feat in FEATURES:
+
+    val      = input_data[feat]
+    baseline = centroid_df[feat]
+
+    delta    = val - baseline
+
+    arrow    = '↑' if delta > 0 else '↓'
+
+    print(
+        f'    {feat:<12} '
+        f'val={val:.3f}  '
+        f'baseline={baseline:.3f}  '
+        f'delta={arrow}{abs(delta):.3f}'
+    )
