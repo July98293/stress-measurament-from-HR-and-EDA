@@ -1,0 +1,280 @@
+import lightgbm as lgb
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
+import matplotlib.pyplot as plt
+import numpy as np
+
+FEATURES = [
+    'hrrange', 'hrvar', 'hrstd', 'hrmin', 'hrmax', 'hrkurt',
+    'edarange', 'edavar', 'edastd', 'edamin'
+]
+
+# ============================================================
+# NORMALIZATION APPROACH COMPARISON
+# ============================================================
+
+def train_and_score(X_tr, y_tr, X_te, y_te, label):
+
+    model = lgb.LGBMClassifier(
+        objective='binary',
+        n_estimators=500,
+        learning_rate=0.05,
+        num_leaves=63,
+        verbose=-1,
+        random_state=42,
+        n_jobs=-1
+    )
+
+    model.fit(
+        X_tr,
+        y_tr,
+        eval_set=[(X_te, y_te)],
+        callbacks=[
+            lgb.early_stopping(50, verbose=False),
+            lgb.log_evaluation(-1)
+        ]
+    )
+
+    y_pred = model.predict(X_te)
+    y_prob = model.predict_proba(X_te)[:, 1]
+
+    acc = accuracy_score(y_te, y_pred)
+    f1  = f1_score(y_te, y_pred)
+    auc = roc_auc_score(y_te, y_prob)
+
+    print(f"{label:<35} "
+          f"acc={acc:.4f}  "
+          f"f1={f1:.4f}  "
+          f"auc={auc:.4f}")
+
+    return model, acc, f1, auc
+
+
+print("=" * 70)
+print("NORMALIZATION STRATEGY COMPARISON")
+print("=" * 70)
+
+results_comparison = {}
+
+# ============================================================
+# APPROACH 1 — RAW ABSOLUTE FEATURES
+# No normalization applied
+# ============================================================
+
+m1, acc1, f1_1, auc1 = train_and_score(
+    X_train,
+    y_train,
+    X_test,
+    y_test,
+    "1. Raw absolute features"
+)
+
+results_comparison['absolute'] = (acc1, f1_1, auc1)
+
+# ============================================================
+# APPROACH 2 — SUBJECT-WISE Z-SCORE NORMALIZATION
+#
+# For each subject:
+#
+#     z = (x - mean_subject) / std_subject
+#
+# Removes subject-specific physiological bias and
+# expresses features as deviations from each subject's
+# personal distribution.
+# ============================================================
+
+def zscore_per_subject(df, features):
+
+    df = df.copy()
+
+    for subj in df['Subject'].unique():
+
+        mask = df['Subject'] == subj
+
+        subj_data = df.loc[mask, features]
+
+        std = subj_data.std().replace(0, 1)
+
+        df.loc[mask, features] = (
+            subj_data - subj_data.mean()
+        ) / std
+
+    return df
+
+
+train_zscore = zscore_per_subject(train_df, FEATURES)
+test_zscore  = zscore_per_subject(test_df,  FEATURES)
+
+m2, acc2, f1_2, auc2 = train_and_score(
+    train_zscore[FEATURES],
+    y_train,
+    test_zscore[FEATURES],
+    y_test,
+    "2. Subject-wise z-score normalization"
+)
+
+results_comparison['zscore'] = (acc2, f1_2, auc2)
+
+# ============================================================
+# APPROACH 3 — DELTA FROM PERSONAL BASELINE
+#
+# Baseline:
+# Mean of the first N windows for each subject
+#
+# Delta:
+#
+#     delta = current_value - personal_baseline
+#
+# Represents how far the signal deviates from the
+# subject's physiological resting state.
+# ============================================================
+
+def add_delta_features(df, features, n_baseline=20):
+
+    df = df.copy()
+
+    delta_features = [f'delta_{f}' for f in features]
+
+    for subj in df['Subject'].unique():
+
+        mask = df['Subject'] == subj
+
+        subj_data = df.loc[mask, features]
+
+        baseline = subj_data.iloc[:n_baseline].mean()
+
+        df.loc[mask, delta_features] = (
+            subj_data.values - baseline.values
+        )
+
+    return df, delta_features
+
+
+train_delta, DELTA_FEATURES = add_delta_features(
+    train_df,
+    FEATURES,
+    n_baseline=20
+)
+
+test_delta, _ = add_delta_features(
+    test_df,
+    FEATURES,
+    n_baseline=20
+)
+
+m3, acc3, f1_3, auc3 = train_and_score(
+    train_delta[DELTA_FEATURES],
+    y_train,
+    test_delta[DELTA_FEATURES],
+    y_test,
+    "3. Delta from personal baseline"
+)
+
+results_comparison['delta'] = (acc3, f1_3, auc3)
+
+# ============================================================
+# APPROACH 4 — RAW FEATURES + DELTA FEATURES
+#
+# Combines:
+# - absolute physiological values
+# - deviation from personal baseline
+#
+# Provides both global and personalized information.
+# ============================================================
+
+COMBINED_FEATURES = FEATURES + DELTA_FEATURES
+
+m4, acc4, f1_4, auc4 = train_and_score(
+    train_delta[COMBINED_FEATURES],
+    y_train,
+    test_delta[COMBINED_FEATURES],
+    y_test,
+    "4. Raw + delta combined"
+)
+
+results_comparison['combined'] = (acc4, f1_4, auc4)
+
+# ============================================================
+# VISUAL COMPARISON
+# ============================================================
+
+fig, ax = plt.subplots(figsize=(10, 4))
+
+approach_labels = [
+    'Raw',
+    'Z-score\nper subject',
+    'Delta\nbaseline',
+    'Raw\n+ Delta'
+]
+
+accs = [
+    results_comparison[k][0]
+    for k in ['absolute', 'zscore', 'delta', 'combined']
+]
+
+f1s = [
+    results_comparison[k][1]
+    for k in ['absolute', 'zscore', 'delta', 'combined']
+]
+
+aucs = [
+    results_comparison[k][2]
+    for k in ['absolute', 'zscore', 'delta', 'combined']
+]
+
+x = np.arange(len(approach_labels))
+w = 0.25
+
+bars1 = ax.bar(
+    x - w,
+    accs,
+    w,
+    label='Accuracy',
+    color='#2563eb',
+    alpha=0.85
+)
+
+bars2 = ax.bar(
+    x,
+    f1s,
+    w,
+    label='F1-score',
+    color='#f59e0b',
+    alpha=0.85
+)
+
+bars3 = ax.bar(
+    x + w,
+    aucs,
+    w,
+    label='ROC-AUC',
+    color='#4ade80',
+    alpha=0.85
+)
+
+ax.set_xticks(x)
+ax.set_xticklabels(approach_labels, fontsize=10)
+
+ax.set_ylim(0.75, 1.0)
+
+ax.set_ylabel('Score')
+ax.set_title('Comparison of Normalization Strategies')
+
+ax.legend()
+ax.grid(axis='y', alpha=0.3)
+
+for bars in [bars1, bars2, bars3]:
+
+    for bar in bars:
+
+        ax.text(
+            bar.get_x() + bar.get_width()/2,
+            bar.get_height() + 0.002,
+            f'{bar.get_height():.3f}',
+            ha='center',
+            va='bottom',
+            fontsize=8
+        )
+
+plt.tight_layout()
+plt.show()
