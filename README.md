@@ -29,7 +29,7 @@ For training i use LightGBM
   F1 Score  : 0.8439  
   AUC-ROC   : 0.9380  
 
-# 0/1 lassification
+# 0/1 Classification
 
 Classification report:
 
