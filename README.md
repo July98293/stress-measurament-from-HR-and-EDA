@@ -69,7 +69,7 @@ Beyond binary classification, a continuous stress index is derived from each sam
 
 ![descrizione](3.png)
 
-I tried different way of normalizinfg data because different person have different resting rate, so i tought a delta would be more accurate. Spoiler: nope.
+I tried different way of normalizing data because different person have different resting rate, so i tought a delta would be more accurate. Spoiler: noope.
 Beetween: raw absolute values, per-subject z-score, delta from personal baseline, and their combination.
 Absolute values outperformed all alternatives (AUC 0.937 vs 0.864 / 0.825 / 0.925).
 This is probabily because an artifact of the synthetic dataset, 200 subjects were generated from shared statistical distributions with no true inter-individual physiological variability, so subject-level normalization removes discriminative signal instead of bias.
