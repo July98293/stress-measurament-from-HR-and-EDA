@@ -1,3 +1,5 @@
+![descrizione](https://www.google.com/search?sca_esv=7d9c60e3220b4d37&rlz=1C1FKPE_en-GBBE1160BE1161&sxsrf=ANbL-n4J2RHLfdKkPUtP1ZXnSO-g5kbwTw:1779797100501&udm=2&fbs=ADc_l-ZANp2e_QKCXb27elGbVDkVtYrvHDDMkm2KkfwlZ2f9RmOIN-M0T4-BcFxMUAF6j93C_bvFMjZN-3jFWA4Q2hR4dh-Ohz_CYKMkT3GgOziIXbN2vIdypyGSxmyjmZB7X1oYUW6ya8oaAhg7yb0kcOXcL0g7qEsNubhnqcynUasFTUVdhNfGIIC6w14PCBOg-FSAs1GE&q=stress+sport&sa=X&ved=2ahUKEwinj8rv9NaUAxXShf0HHYfjOHwQtKgLegQIGBAB#sv=CAMSVhoyKhBlLUNfbEJncDZ0c0dKbHRNMg5DX2xCZ3A2dHNHSmx0TToOR2RqekwtWmdxTi1sU00gBCocCgZtb3NhaWMSEGUtQ19sQmdwNnRzR0psdE0YADABGAcggqKZmgdKCBABGAEgASgB)
+
 # Data
 
 Data are taken from SynthesizedStressData.csv from https://github.com/xalentis/Stress
