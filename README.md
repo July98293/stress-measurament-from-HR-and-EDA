@@ -1,4 +1,6 @@
-![descrizione](https://drstankovich.com/wp-content/uploads/2025/10/pexels-run-ffwpu-12698213-2048x1365.jpg)
+# Stress measurament from HR and EDA
+
+![descrizione](https://media.gqitalia.it/photos/5f91bb06128632c9f53fdd34/16:9/w_1920,c_limit/GettyImages-748340531.jpg)
 
 # Data
 
